@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="scalability.mapper.CrudMapper">
+	<select id="getAll" resultType="CrudEntity">
+		SELECT
+			id,
+			entity_name,
+			entity_description
+		FROM
+			simple_crud;
+	</select>
+	
+	<select id="getById" parameterType="long" resultType="CrudEntity">
+		SELECT
+			id,
+			entity_name,
+			entity_description
+		FROM
+			simple_crud
+		WHERE
+			id = #{id}
+	</select>
+	
+	<insert id="create" parameterType="CrudEntity">
+		<selectKey order="AFTER" keyProperty="id" resultType="long">
+		    SELECT currval('simple_crud_id_seq')
+		</selectKey>
+		INSERT INTO simple_crud (
+			entity_name,
+			entity_description
+		) VALUES (
+			#{entityName},
+			#{entityDescription}
+		);
+	</insert>
+	
+	<update id="update" parameterType="CrudEntity">
+		UPDATE simple_crud
+	    SET entity_name = #{entityName},
+	       	entity_description = #{entityDescription}
+		WHERE
+			id = #{id};
+	</update>
+	
+	<delete id="delete" parameterType="long">
+		DELETE
+		FROM
+			simple_crud
+		WHERE
+			id = #{id}
+	</delete>
+</mapper>

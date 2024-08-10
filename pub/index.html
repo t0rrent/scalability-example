@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Scalable Application</title>
+		<style>
+			body {
+				margin: 0px;
+			}
+		
+			.title {
+  				text-align: center;
+  				padding: 20px;
+			}
+		
+			table {
+			    font-family: arial, sans-serif;
+			    border-collapse: collapse;
+			    width: 800px;
+  				margin: auto;
+			}
+
+			td, th {
+				border: 1px solid #dddddd;
+				text-align: left;
+				padding: 0px;
+			}
+			
+			.non_input {
+				padding: 8px;
+			}
+			
+			input {
+  				box-sizing: border-box;
+  				padding: 8px;
+    			width: 100%;
+            	border: none;
+			}
+			
+			button {
+				border: 1px solid #444444;
+				background-color: #4275f5;
+ 				text-decoration: none;
+ 				color: #ffffff;
+ 				margin: 8px;
+ 				width: calc(100% - 16px);
+ 				height: calc(100% - 16px);
+			}
+			
+			button:hover {
+				background-color: #6691ff;
+			}
+			
+			.delete_button {
+				background-color: #d10808;
+			}
+			
+			.delete_button:hover {
+				background-color: #f02222;
+			}
+			
+			#new_button {
+				padding: 0px;
+				font-size: 26px;
+				width: 32px;
+				height: 32px;
+				border-radius: 16px;
+				margin-top: 0px;
+  				margin-left: calc(50% + 408px);
+			}
+			
+			#info_box {
+			    font-family: arial, sans-serif;
+				width: 300px;
+				background-color: #eeeeee;
+				font-size: 18px;
+				padding: 8px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="info_box">
+			<div id="fe_id">Frontend ID: ?</div>
+			<div id="be_id">Backend ID: ?</div>
+			<div id="db_version">Database Version: ?</div>
+		</div>
+		<h1 class="title">Simple CRUD interface</h1>
+		<table id="main_table">
+			<tr>
+    			<th class="non_input">id</th>
+				<th class="non_input">entity name</th>
+				<th class="non_input">entity description</th>
+				<th class="non_input"></th>
+				<th class="non_input"></th>
+  			</tr>
+  			<tr>
+				<td class="non_input"></td>
+				<td class="non_input">loading...</td>
+				<td class="non_input">loading...</td>
+				<td class="non_input"></td>
+				<td class="non_input"></td>
+			</tr>
+		</table>
+		<button id="new_button" onclick="addNewRow()">+</button>
+		
+		<script>
+			let = STATIC_SERVER_ID = "dev environment"
+		</script>
+		<script src="lib.js"></script>
+		<script src="id.js"></script>
+		<script>
+			let localStorage;
+		
+			const tableHeading = `<tr>
+    			<th class="non_input">id</th>
+				<th class="non_input">entity name</th>
+				<th class="non_input">entity description</th>
+				<th class="non_input"></th>
+				<th class="non_input"></th>
+  			</tr>`;
+  			
+  			function getTemporaryId() {
+  				const ids = localStorage.table
+  					.map((table) => table.id);
+  				return Math.min(0, Math.min.apply(Math, ids)) - 1;
+  			}
+  			
+  			function getRow(id) {
+  				return localStorage.table
+					.filter((row) => row.id == id)[0];
+  			}
+		
+			function getTableData(callback) {
+				const httpRequest = {
+						baseUrl: "http://localhost:80/api/simple-crud",
+						requestMethod: "GET"
+				};
+				invokeHttpAsync(httpRequest, callback, (e) => console.error(e));
+			}
+			
+			function handleInput(id, mutableFieldName, newValue) {
+				const rowData = getRow(id);
+				rowData[mutableFieldName] = newValue;
+			}
+			
+			function createInputHTML(rowData, mutableFieldName) {
+				const defaultValue = rowData[mutableFieldName];
+				return `<input type="text" onchange="handleInput(${rowData.id}, '${mutableFieldName}', this.value)" value="${defaultValue == null ? "" : defaultValue}"></input>`;
+			}
+			
+			function successCallback(returnedValue) {
+				console.log("server reporting a success", returnedValue);
+			}
+			
+			function updateId(id, newId) {
+				const rowData = getRow(id).id = newId;
+				
+				const crudTable = document.getElementById("main_table");
+				const rows = crudTable.getElementsByTagName("tr");
+				for (let rowIndex = rows.length - 1; rowIndex >= 0; rowIndex--) {
+					const row = rows[rowIndex];
+					if (row.getAttribute("entityid") == id) {
+						row.setAttribute("entityid", newId);
+						const entries = row.getElementsByTagName("td");
+						entries[0].textContent = newId;
+
+						const nameInput = entries[1].getElementsByTagName("input")[0];
+						const descInput = entries[2].getElementsByTagName("input")[0];
+						const updateButton = entries[3].getElementsByTagName("button")[0];
+						const deleteButton = entries[4].getElementsByTagName("button")[0];
+
+						nameInput.setAttribute("onchange", `handleInput(${newId}, 'entityName', this.value)`);
+						descInput.setAttribute("onchange", `handleInput(${newId}, 'entityDescription', this.value)`);
+						updateButton.setAttribute("onclick", `update(${newId})`);
+						deleteButton.setAttribute("onclick", `deleteEntity(${newId})`);
+						break;
+					}
+				}
+			}
+			
+			function update(id) {
+				const rowData = getRow(id);
+				const httpRequest = {
+						baseUrl: "http://localhost:80/api/simple-crud" + (id < 0 ? "" : "?id=" + id),
+						body: JSON.stringify(rowData),
+						requestMethod: id < 0 ? "POST" : "PUT"
+				};
+				invokeHttpAsync(httpRequest, (response) => {
+					updateId(id, response.id);
+					successCallback(response);
+				}, (e) => console.error(e));
+			}
+			
+			function deleteId(id) {
+				const rowData = getRow(id);
+				const index = localStorage.table.indexOf(rowData);
+				localStorage.table.splice(index, 1);
+				
+				const crudTable = document.getElementById("main_table");
+				const rows = crudTable.getElementsByTagName("tr");
+				for (let rowIndex = rows.length - 1; rowIndex >= 0; rowIndex--) {
+					const row = rows[rowIndex];
+					if (row.getAttribute("entityid") == id) {
+						row.parentNode.removeChild(row);
+						break;
+					}
+				}
+			}
+			
+			function deleteEntity(id) {
+				const rowData = getRow(id);
+				const httpRequest = {
+						baseUrl: "http://localhost:80/api/simple-crud?id=" + id,
+						requestMethod: "DELETE"
+				};
+				invokeHttpAsync(httpRequest, (response) => {
+					deleteId(id);
+					successCallback(response);
+				}, (e) => console.error(e));
+			}
+			
+			function addRow(rowData) {
+				const crudTable = document.getElementById("main_table");
+				crudTable.innerHTML += `
+		  		<tr entityid="${rowData.id}">
+					<td class="non_input">${rowData.id < 0 ? "-" : rowData.id}</td>
+					<td>${createInputHTML(rowData, "entityName")}</td>
+					<td>${createInputHTML(rowData, "entityDescription")}</td>
+					<td><button onclick="update(${rowData.id})">update</button></td>
+					<td><button class="delete_button" onclick="deleteEntity(${rowData.id})">delete</button></td>
+				</tr>`;
+			}
+  			
+  			function addNewRow() {
+  				if (localStorage === undefined) {
+  					return;
+  				}
+  				const newRowData = {
+  						id: getTemporaryId(),
+  						entityName: "New Entity",
+  						entityDescription: "Description"
+  				};
+  				localStorage.table.push(newRowData);
+  				addRow(newRowData);
+  			}
+			
+			function setTable(tableData) {
+				localStorage = tableData;
+				const crudTable = document.getElementById("main_table");
+				crudTable.innerHTML = tableHeading;
+				tableData.table.forEach(addRow);
+			}
+			
+			function showVersionInfo() {
+				const frontendID = document.getElementById("fe_id");
+				const backendID = document.getElementById("be_id");
+				const databaseVersion = document.getElementById("db_version");
+				frontendID.textContent = `Frontend ID: ${STATIC_SERVER_ID}`;
+				
+				invokeHttpAsync({
+						baseUrl: "http://localhost:80/api/example/backend-id",
+						requestMethod: "GET"
+				}, (response) => {
+					backendID.textContent = `Backend ID: ${response.string}`;
+					successCallback(response);
+				}, (e) => console.error(e));
+				
+				invokeHttpAsync({
+						baseUrl: "http://localhost:80/api/example/database-version",
+						requestMethod: "GET"
+				}, (response) => {
+					databaseVersion.textContent = `Database Version: ${response.string}`;
+					successCallback(response);
+				}, (e) => console.error(e));
+			}
+		
+			window.onload = function() {
+				showVersionInfo();
+				getTableData(setTable);
+			}
+		</script>
+	</body>
+</html>
