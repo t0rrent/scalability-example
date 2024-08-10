@@ -1,5 +1,6 @@
 {
 	"serverUrl": "http://localhost",
 	"serverPort": 80,
+	"layer": "allInOne",
 	"backendId": "dev environment"
 }
